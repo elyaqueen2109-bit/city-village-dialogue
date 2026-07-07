@@ -402,11 +402,31 @@
     o.start(c.currentTime); o.stop(c.currentTime+0.15);
   }
 
+  // ========== ГОЛОСА (женский для телефона) ==========
+  let femaleVoice = null;
+  if ('speechSynthesis' in window) {
+    speechSynthesis.onvoiceschanged = () => {
+      const voices = speechSynthesis.getVoices();
+      femaleVoice = voices.find(v => 
+        v.lang.startsWith('en') && 
+        (v.name.includes('Female') || 
+         v.name.includes('Samantha') || 
+         v.name.includes('Karen') ||
+         v.name.includes('Susan') ||
+         v.name.includes('Google US English') ||
+         v.name.includes('Zira'))
+      );
+    };
+  }
+
   function speak(text, isAnna = true, callback = null) {
     if ('speechSynthesis' in window) {
       speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'en-US'; u.rate = 0.85; u.pitch = isAnna ? 1.15 : 1.0;
+      u.lang = 'en-US';
+      u.rate = 0.85;
+      u.pitch = isAnna ? 1.15 : 1.0;
+      if (femaleVoice) u.voice = femaleVoice;
       if (callback) { u.onend = callback; u.onerror = callback; }
       speechSynthesis.speak(u);
     }
@@ -472,6 +492,7 @@
     const msg=chatMessages[chatIndex]; renderMessage(msg); dingSound();
     const u=new SpeechSynthesisUtterance(msg.text.replace(/<[^>]*>/g,''));
     u.lang='en-US'; u.rate=0.85; u.pitch=msg.from==='anna'?1.15:1.0;
+    if(femaleVoice) u.voice=femaleVoice;
     u.onend=()=>{chatIndex++; setTimeout(showNextMessage,500);};
     u.onerror=()=>{chatIndex++; setTimeout(showNextMessage,500);};
     speechSynthesis.speak(u);
@@ -521,7 +542,7 @@
   function showTense(){const c=document.getElementById('tenseContainer'); if(tI===0) tShuff=[...tenseData].sort(()=>Math.random()-0.5); if(tI>=tShuff.length){c.innerHTML='<p style="font-size:clamp(13px,2vw,16px);text-align:center;">🎉 All done!</p>'; return;} c.innerHTML=''; const item=tShuff[tI]; const card=document.createElement('div'); card.className='choose-card'; card.innerHTML=item.text; const sel=document.createElement('select'); sel.className='select-tense'; const ph=document.createElement('option'); ph.textContent='...'; ph.value=''; ph.disabled=true; ph.selected=true; sel.appendChild(ph); item.opts.forEach(o=>{const op=document.createElement('option'); op.value=o; op.textContent=o; sel.appendChild(op);}); sel.addEventListener('change',function(e){if(e.target.value===item.ans){e.target.style.background='#16a34a'; e.target.style.color='white'; e.target.disabled=true; okSound(); tI++; setTimeout(showTense,800);}else{e.target.style.background='#dc2626'; e.target.style.color='white'; errSound(); setTimeout(()=>{e.target.style.background='white'; e.target.style.color='#1e293b'; e.target.value='';},1000);}}); card.appendChild(sel); c.appendChild(card);}
   document.getElementById('nextTenseBtn').addEventListener('click',()=>{tI++; showTense();});
 
-  // ========== MIXED MESSAGES (13) ==========
+  // ========== MIXED MESSAGES ==========
   const mixedData=[{words:['It','takes','30','minutes','because','of','the','heavy','traffic'],ans:'It takes 30 minutes because of the heavy traffic'},{words:['I\'m','writing','a','story','for','my','blog'],ans:'I\'m writing a story for my blog'},{words:['My','school','has','1,500','students'],ans:'My school has 1,500 students'},{words:['I\'m','visiting','my','grandma','on','Saturday'],ans:'I\'m visiting my grandma on Saturday'},{words:['I','prefer','the','peace','and','quiet','of','the','countryside'],ans:'I prefer the peace and quiet of the countryside'},{words:['There\'s','always','something','to','do','in','London'],ans:'There\'s always something to do in London'},{words:['Too','much','hustle','and','bustle','for','me'],ans:'Too much hustle and bustle for me'},{words:['Every','morning','I','take','the','bus','to','school'],ans:'Every morning I take the bus to school'},{words:['I','was','born','here','so','London','is','my','home'],ans:'I was born here so London is my home'},{words:['We','have','a','big','library','a','computer','lab','and','a','swimming','pool'],ans:'We have a big library a computer lab and a swimming pool'},{words:['She','lives','outside','the','city','in','a','small','town'],ans:'She lives outside the city in a small town'},{words:['The','public','transport','is','great','you','can','go','anywhere'],ans:'The public transport is great you can go anywhere'},{words:['Every','city','has','good','sides','and','bad','sides'],ans:'Every city has good sides and bad sides'}];
   let mI=0, mRes=[];
   function showMixed(){const c=document.getElementById('mixedContainer'); c.innerHTML=''; mRes=[]; const item=mixedData[mI%mixedData.length]; const wordRow=document.createElement('div'); wordRow.className='unscramble-row'; [...item.words].sort(()=>Math.random()-0.5).forEach(w=>{const wc=document.createElement('div'); wc.className='unscramble-word'; wc.textContent=w; wc.addEventListener('click',()=>{mRes.push(w); wc.remove(); const rr=document.getElementById('mixedResRow'); if(rr) rr.innerHTML=mRes.map(w=>`<span class="unscramble-word" style="background:#dbeafe;">${w}</span>`).join(' ');}); wordRow.appendChild(wc);}); c.appendChild(wordRow); const rr=document.createElement('div'); rr.className='result-row'; rr.id='mixedResRow'; c.appendChild(rr); const checkBtn=document.createElement('button'); checkBtn.className='btn btn-green'; checkBtn.textContent='✅ Check'; checkBtn.addEventListener('click',()=>{const fb=document.createElement('p'); fb.className='feedback'; const userAnswer=mRes.join(' ').replace(/\s+/g,' ').trim().toLowerCase(); const correctAnswer=item.ans.replace(/\s+/g,' ').trim().toLowerCase(); if(userAnswer===correctAnswer){fb.textContent='✅ Correct!'; fb.style.color='#16a34a'; okSound();}else{fb.textContent='❌ Try again! Correct: '+item.ans; fb.style.color='#dc2626'; errSound();} c.appendChild(fb);}); c.appendChild(checkBtn); mI++;}
@@ -533,7 +554,7 @@
   function showQ(){const c=document.getElementById('questionsContainer'); c.innerHTML=''; const item=qData[qI%qData.length]; const card=document.createElement('div'); card.className='choose-card'; card.innerHTML=`<p style="font-weight:bold;">${item.q}</p>`; const inp=document.createElement('input'); inp.className='transform-input'; inp.placeholder='Your answer...'; const btn=document.createElement('button'); btn.className='btn btn-blue'; btn.textContent='Check'; btn.addEventListener('click',()=>{const fb=document.createElement('p'); fb.className='feedback'; if(item.a.some(a=>inp.value.trim().toLowerCase()===a.toLowerCase())){fb.textContent='✅ Correct!'; fb.style.color='#16a34a'; okSound();}else{fb.textContent='❌ Possible: '+item.a[0]; fb.style.color='#dc2626'; errSound();} c.appendChild(fb);}); card.appendChild(inp); card.appendChild(btn); c.appendChild(card); qI++;}
   document.getElementById('nextQBtn').addEventListener('click',showQ);
 
-  // ========== TRANSLATE (12) ==========
+  // ========== TRANSLATE ==========
   const transData=[{ru:'Хлоя живёт в Лондоне.',en:['Chloe lives in London.']},{ru:'Лондон — огромный город.',en:['London is a huge city.']},{ru:'В школе Хлои есть хорошие удобства.',en:['Chloe\'s school has great facilities.']},{ru:'Каждое утро Хлоя ездит на автобусе в школу.',en:['Every morning Chloe takes the bus to school.']},{ru:'В эти выходные она навещает свою бабушку.',en:['This weekend she is visiting her grandma.']},{ru:'Анна предпочитает тишину и покой деревни.',en:['Anna prefers the peace and quiet of the countryside.']},{ru:'В Лондоне отличный общественный транспорт.',en:['London has great public transport.']},{ru:'Иногда люди чувствуют тоску по дому.',en:['Sometimes people feel homesick.']},{ru:'Хлоя сейчас делает домашнюю работу.',en:['Chloe is doing her homework right now.']},{ru:'Анна не любит шум и суету города.',en:['Anna doesn\'t like the hustle and bustle of the town.']},{ru:'Рядом с домом Хлои есть хороший парк.',en:['There is a nice park near Chloe\'s house.']},{ru:'В Лондоне всегда есть чем заняться.',en:['There is always something to do in London.']}];
   let trI=0, trShuff=[];
   function showTrans(){const c=document.getElementById('translateContainer'); if(trI===0) trShuff=[...transData].sort(()=>Math.random()-0.5); if(trI>=trShuff.length){c.innerHTML='<p style="font-size:clamp(13px,2vw,16px);text-align:center;">🎉 All translated!</p>'; return;} c.innerHTML=''; const item=trShuff[trI]; const card=document.createElement('div'); card.className='translate-card'; card.style.background='#fff9c4'; card.innerHTML=`<p style="font-weight:bold;">${item.ru}</p>`; const inp=document.createElement('input'); inp.className='translate-input'; inp.placeholder='Translate...'; const btn=document.createElement('button'); btn.className='btn btn-blue'; btn.textContent='Check'; btn.addEventListener('click',()=>{const fb=document.createElement('p'); fb.className='feedback'; if(item.en.some(e=>inp.value.trim().toLowerCase()===e.toLowerCase())){fb.textContent='✅ Correct!'; fb.style.color='#16a34a'; okSound(); trI++; setTimeout(showTrans,1000);}else{fb.textContent='❌ Correct: '+item.en[0]; fb.style.color='#dc2626'; errSound();} c.appendChild(fb);}); card.appendChild(inp); card.appendChild(btn); c.appendChild(card);}
@@ -560,7 +581,7 @@
   function createMatchHalves(){const cont=document.getElementById('matchHalvesContainer'); cont.innerHTML=''; document.getElementById('matchHalvesFeedback').textContent=''; mhCount=0; const row=document.createElement('div'); row.style.cssText='display:flex;gap:12px;justify-content:center;flex-wrap:wrap;'; const left=document.createElement('div'); left.className='match-column'; const right=document.createElement('div'); right.className='match-column'; const lShuff=[...matchHalvesData].sort(()=>Math.random()-0.5); const rShuff=[...matchHalvesData].sort(()=>Math.random()-0.5); lShuff.forEach(h=>{const el=document.createElement('div'); el.className='match-item'; el.textContent=h.left; el.dataset.left=h.left; el.addEventListener('click',function(){if(this.classList.contains('matched'))return; if(mhSel)mhSel.classList.remove('selected'); mhSel=this; this.classList.add('selected');}); left.appendChild(el);}); rShuff.forEach(h=>{const el=document.createElement('div'); el.className='match-item'; el.textContent=h.right; el.dataset.left=h.left; el.addEventListener('click',function(){if(!mhSel||this.classList.contains('matched'))return; const orig=matchHalvesData.find(m=>m.left===mhSel.dataset.left); if(orig&&orig.right===this.textContent){const ci=matchHalvesData.findIndex(m=>m.left===orig.left); const col=mhColors[ci%mhColors.length]; mhSel.style.background=col; mhSel.style.color='white'; mhSel.classList.add('matched'); mhSel.classList.remove('selected'); this.style.background=col; this.style.color='white'; this.classList.add('matched'); mhCount++; okSound(); mhSel=null; if(mhCount===matchHalvesData.length) document.getElementById('matchHalvesFeedback').textContent='🎉 All matched!';}else{errSound(); mhSel.classList.remove('selected'); mhSel=null;}}); right.appendChild(el);}); row.appendChild(left); row.appendChild(right); cont.appendChild(row);}
   document.getElementById('resetMatchHalvesBtn').addEventListener('click',createMatchHalves);
 
-  // ========== MEMORY: MISSING WORDS (ИСПРАВЛЕНО) ==========
+  // ========== MEMORY: MISSING WORDS ==========
   const missingData=[
     {text:'Right now I\'m ___ in my room and ___ my homework.',gaps:['sitting','doing'],opts1:['sitting','running','sleeping'],opts2:['doing','making','playing'],from:'chloe'},
     {text:'I\'m ___ a story for my ___.',gaps:['writing','blog'],opts1:['reading','writing','watching'],opts2:['friend','blog','teacher'],from:'anna'},
@@ -579,38 +600,23 @@
     c.innerHTML=''; const item=missShuff[missI];
     const card=document.createElement('div'); card.className='choose-card';
     const parts=item.text.split('___');
-    
-    // Аватарка + первая часть
     const avatarSpan=document.createElement('span'); avatarSpan.innerHTML=avatarHTML(item.from); card.appendChild(avatarSpan);
     const span0=document.createElement('span'); span0.textContent=' '+parts[0]; card.appendChild(span0);
-    
-    // Первый select
     const sel1=document.createElement('select'); sel1.className='select-gap';
     const ph1=document.createElement('option'); ph1.textContent='...'; ph1.value=''; ph1.disabled=true; ph1.selected=true; sel1.appendChild(ph1);
     item.opts1.forEach(o=>{const op=document.createElement('option'); op.value=o; op.textContent=o; sel1.appendChild(op);});
     card.appendChild(sel1);
-    
-    // Вторая часть
     const span1=document.createElement('span'); span1.textContent=parts[1]; card.appendChild(span1);
-    
-    // Второй select
     const sel2=document.createElement('select'); sel2.className='select-gap';
     const ph2=document.createElement('option'); ph2.textContent='...'; ph2.value=''; ph2.disabled=true; ph2.selected=true; sel2.appendChild(ph2);
     item.opts2.forEach(o=>{const op=document.createElement('option'); op.value=o; op.textContent=o; sel2.appendChild(op);});
     card.appendChild(sel2);
-    
-    // Оставшаяся часть
     if(parts[2]){const span2=document.createElement('span'); span2.textContent=parts[2]; card.appendChild(span2);}
-    
-    // Кнопка
     const btn=document.createElement('button'); btn.className='btn btn-blue'; btn.textContent='Check'; btn.style.marginLeft='8px';
     btn.addEventListener('click',()=>{
       const fb=document.createElement('p'); fb.className='feedback';
-      if(sel1.value===item.gaps[0]&&sel2.value===item.gaps[1]){
-        fb.textContent='✅ Correct!'; fb.style.color='#16a34a'; okSound(); missI++; setTimeout(showMissing,800);
-      }else{
-        fb.textContent='❌ Try again!'; fb.style.color='#dc2626'; errSound();
-      }
+      if(sel1.value===item.gaps[0]&&sel2.value===item.gaps[1]){fb.textContent='✅ Correct!'; fb.style.color='#16a34a'; okSound(); missI++; setTimeout(showMissing,800);}
+      else{fb.textContent='❌ Try again!'; fb.style.color='#dc2626'; errSound();}
       card.appendChild(fb);
     });
     card.appendChild(btn); c.appendChild(card);
