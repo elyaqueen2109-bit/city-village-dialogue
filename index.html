@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Lesson 5 – Chat with a Friend in London</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      padding: 10px;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .container {
+      max-width: 1000px;
+      width: 100%;
+      background: white;
+      border-radius: 32px;
+      padding: 20px 25px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    }
+    h1 { font-size: clamp(22px, 4vw, 30px); color: #0f172a; margin-bottom: 4px; text-align: center; }
+    .blog-meta { text-align: center; color: #64748b; font-size: clamp(12px, 2vw, 15px); margin-bottom: 15px; }
+
+    .main-tabs {
+      display: flex; gap: 4px; margin-bottom: 12px;
+      border-bottom: 2px solid #e2e8f0; flex-wrap: wrap; justify-content: center;
+    }
+    .tab-btn {
+      background: none; border: none; padding: 7px 10px;
+      font-size: clamp(10px, 1.6vw, 13px); font-weight: 600; color: #64748b;
+      cursor: pointer; border-bottom: 3px solid transparent; transition: 0.2s;
+      white-space: nowrap;
+    }
+    .tab-btn.active {
+      color: #2563eb; border-bottom-color: #2563eb; background: #eff6ff;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .tablet-frame {
+      width: 100%; max-width: 750px; min-height: 420px;
+      background: #e8e0d5; border-radius: 28px;
+      border: 5px solid #2a2a2a; margin: 8px auto;
+      padding: 18px 16px; position: relative;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+    }
+    .tablet-frame::before {
+      content: ''; position: absolute; top: 10px; left: 50%;
+      transform: translateX(-50%); width: 50px; height: 4px;
+      background: #444; border-radius: 8px;
+    }
+    .tablet-header {
+      text-align: center; font-weight: 700; font-size: 13px;
+      padding: 2px 0 6px; border-bottom: 1px solid #ccc;
+      margin-bottom: 6px; color: #1a1a1a;
+    }
+    .tablet-inner {
+      background: #fefef9; border-radius: 16px;
+      padding: 12px 15px; min-height: 250px; max-height: 400px; overflow-y: auto;
+    }
+    .chat-area { max-height: 360px; overflow-y: auto; padding: 4px 0; }
+    .msg-row {
+      display: flex; align-items: flex-end; margin: 6px 0;
+      animation: dropIn 0.35s ease;
+    }
+    .msg-row.right { flex-direction: row-reverse; }
+    .msg-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      object-fit: cover; flex-shrink: 0;
+      border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+    }
+    .msg-avatar-placeholder {
+      width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+      background: #2563eb; color: white; display: flex;
+      align-items: center; justify-content: center;
+      font-weight: bold; font-size: 12px;
+      border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+    }
+    .msg-bubble {
+      max-width: 65%; padding: 6px 10px; border-radius: 14px;
+      font-size: 12px; line-height: 1.3; position: relative;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08); word-wrap: break-word;
+    }
+    .msg-row.left .msg-bubble { background: white; border-bottom-left-radius: 3px; margin-left: 6px; }
+    .msg-row.right .msg-bubble { background: #dcf8c6; border-bottom-right-radius: 3px; margin-right: 6px; }
+    .msg-bubble img { max-width: 120px; border-radius: 7px; margin-top: 4px; display: block; }
+    @keyframes dropIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .chat-controls { text-align: center; margin-top: 6px; }
+    .btn {
+      padding: 7px 14px; border-radius: 20px;
+      font-size: clamp(11px, 1.8vw, 14px);
+      font-weight: 700; border: none; cursor: pointer; transition: 0.2s;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1); margin: 2px;
+    }
+    .btn-blue { background: #2563eb; color: white; }
+    .btn-blue:hover { background: #1d4ed8; transform: scale(1.02); }
+    .btn-orange { background: #e67e22; color: white; }
+    .btn-orange:hover { background: #d35400; }
+    .btn-green { background: #16a34a; color: white; }
+    .btn-green:hover { background: #15803d; }
+    .btn-outline {
+      background: white; border: 2px solid #2563eb; color: #2563eb;
+      padding: 5px 10px; border-radius: 16px; font-weight: 600; cursor: pointer;
+      font-size: clamp(10px, 1.6vw, 12px);
+    }
+    .btn-outline:hover { background: #eff6ff; }
+    .btn-outline.active { background: #2563eb; color: white; }
+    .hidden { display: none; }
+
+    .choose-card, .translate-card {
+      border: 2px solid #e2e8f0; border-radius: 14px;
+      padding: 10px 14px; margin: 5px auto;
+      background: #f8fafc; display: flex; align-items: center;
+      gap: 6px; flex-wrap: wrap; max-width: 100%;
+      font-size: clamp(13px, 2vw, 16px); color: #1e293b;
+    }
+    .select-tense, .select-gap {
+      font-size: clamp(12px, 1.8vw, 15px); padding: 4px 7px;
+      border-radius: 7px; border: 2px solid #2563eb;
+      background: white; font-weight: bold; cursor: pointer;
+    }
+    .transform-input, .translate-input {
+      font-size: clamp(12px, 1.8vw, 15px); padding: 5px 8px;
+      border-radius: 7px; border: 2px solid #2563eb;
+      width: 100%; margin-top: 3px;
+    }
+    .feedback { font-size: clamp(11px, 1.6vw, 14px); text-align: center; margin: 4px 0; }
+
+    .match-column { display: flex; flex-direction: column; gap: 4px; min-width: 100px; }
+    .match-item {
+      padding: 5px 8px; border-radius: 7px; font-size: clamp(10px, 1.5vw, 12px);
+      font-weight: 500; cursor: pointer; border: 2px solid #e0e0e0;
+      background: #fafafa; text-align: center; transition: 0.2s;
+    }
+    .match-item:hover { background: #f1f5f9; }
+    .match-item.selected { border-color: #2563eb; background: #eff6ff; }
+    .match-item.matched { border-color: #16a34a; background: #dcfce7; }
+
+    .order-bubble {
+      padding: 5px 8px; border-radius: 12px;
+      font-size: clamp(10px, 1.4vw, 12px); font-weight: 500;
+      cursor: pointer; margin: 2px 0; max-width: 75%;
+      transition: 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+      display: flex; align-items: flex-end; gap: 5px;
+    }
+    .order-bubble.anna { background: white; border-bottom-left-radius: 3px; }
+    .order-bubble.chloe { background: #dcf8c6; border-bottom-right-radius: 3px; margin-left: auto; }
+    .order-bubble:hover { transform: scale(1.01); }
+    .order-bubble.placed { opacity: 0.3; cursor: default; pointer-events: none; }
+    .order-bubble.placed-in-list { cursor: pointer; opacity: 1; }
+    .order-bubble.placed-in-list:hover { background: #fef2f2; }
+
+    .ordered-list {
+      min-height: 30px; max-height: 200px; overflow-y: auto;
+      background: #f1f5f9; border: 2px dashed #cbd5e1;
+      border-radius: 12px; padding: 5px; margin: 5px 0;
+    }
+
+    .role-btn-avatar {
+      width: 34px; height: 34px; border-radius: 50%; object-fit: cover;
+      border: 3px solid #e2e8f0; transition: 0.2s;
+    }
+    .role-btn.active .role-btn-avatar { border-color: #2563eb; }
+
+    .collapsible-header {
+      cursor: pointer; padding: 6px 10px;
+      background: #eff6ff; border-radius: 8px;
+      font-weight: 600; font-size: clamp(11px, 1.6vw, 13px);
+      display: flex; justify-content: space-between; align-items: center;
+      border: 2px solid #bfdbfe; margin-bottom: 4px;
+    }
+    .collapsible-body { display: none; padding: 5px 0; }
+    .collapsible-body.open { display: block; }
+
+    .who-card {
+      display: flex; gap: 10px; justify-content: center; align-items: center; margin: 10px 0;
+    }
+
+    .unscramble-row {
+      display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin: 8px 0;
+    }
+    .unscramble-word {
+      padding: 6px 10px; border-radius: 10px;
+      font-size: clamp(11px, 1.5vw, 14px); font-weight: 500;
+      cursor: pointer; border: 2px solid #f59e0b;
+      background: #fef3c7; color: #1e293b; transition: 0.2s;
+    }
+    .unscramble-word:hover { transform: scale(1.03); }
+
+    .result-row {
+      min-height: 30px; background: #f8fafc;
+      border: 2px dashed #cbd5e1; border-radius: 10px;
+      padding: 6px; margin: 5px auto;
+      display: flex; gap: 6px; flex-wrap: wrap;
+      align-items: center; justify-content: center; max-width: 100%;
+    }
+
+    @media (max-width: 600px) {
+      .container { padding: 8px 10px; border-radius: 18px; }
+      .tab-btn { padding: 5px 6px; font-size: 8px; }
+      .tablet-frame { padding: 10px 8px; border-radius: 20px; }
+      .tablet-inner { padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>💬 Chat with a Friend in London</h1>
+  <div class="blog-meta">Anna & Chloe · Lesson 5</div>
+
+  <div class="main-tabs">
+    <button class="tab-btn active" data-tab="tab-chat">📖 Chat</button>
+    <button class="tab-btn" data-tab="tab-vocab">📝 Vocab</button>
+    <button class="tab-btn" data-tab="tab-truefalse">✅ True/False</button>
+    <button class="tab-btn" data-tab="tab-fill">🔤 Fill Gaps</button>
+    <button class="tab-btn" data-tab="tab-tense">⏳ Tense</button>
+    <button class="tab-btn" data-tab="tab-mixed">🧩 Mixed</button>
+    <button class="tab-btn" data-tab="tab-questions">❓ Questions</button>
+    <button class="tab-btn" data-tab="tab-memory">🧠 Memory</button>
+    <button class="tab-btn" data-tab="tab-translate">🌐 Translate</button>
+    <button class="tab-btn" data-tab="tab-roleplay">🎭 Role Play</button>
+  </div>
+
+  <!-- ========== CHAT ========== -->
+  <div id="tab-chat" class="tab-content active">
+    <div class="tablet-frame">
+      <div class="tablet-header">💬 Chloe · London</div>
+      <div class="tablet-inner"><div class="chat-area" id="chatMessages"></div></div>
+      <div class="chat-controls">
+        <button class="btn btn-blue" id="startChatBtn">▶️ Start Chat</button>
+        <button class="btn btn-orange" id="stopChatBtn" style="display:none;">⏸️ Stop</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== VOCAB ========== -->
+  <div id="tab-vocab" class="tab-content">
+    <div class="tablet-frame">
+      <div class="tablet-header">📝 Vocabulary Match</div>
+      <div class="tablet-inner">
+        <div id="vocabMatchContainer"></div>
+        <p id="vocabFeedback" class="feedback"></p>
+        <button class="btn btn-blue" id="resetVocabBtn">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== TRUE/FALSE ========== -->
+  <div id="tab-truefalse" class="tab-content">
+    <div class="tablet-frame">
+      <div class="tablet-header">✅ True or False?</div>
+      <div class="tablet-inner"><div id="tfContainer"></div><button class="btn btn-blue" id="nextTFBtn">Next</button></div>
+    </div>
+  </div>
+
+  <!-- ========== FILL GAPS ========== -->
+  <div id="tab-fill" class="tab-content">
+    <div class="tablet-frame">
+      <div class="tablet-header">🔤 Fill in the Gaps</div>
+      <div class="tablet-inner"><div id="fillContainer"></div><button class="btn btn-blue" id="nextFillBtn">Next</button></div>
+    </div>
+  </div>
+
+  <!-- ========== TENSE ========== -->
+  <div id="tab-tense" class="tab-content">
+    <div class="tablet-frame">
+      <div class="tablet-header">⏳ Choose the Tense</div>
+      <div class="tablet-inner"><div id="tenseContainer"></div><button class="btn btn-blue" id="nextTenseBtn">Next</button></div>
+    </div>
+  </div>
+
+  <!-- ========== MIXED MESSAGES ========== -->
+  <div id="tab-mixed" class="tab-content">
+    <div class="tablet-frame">
+      <div class="tablet-header">🧩 Mixed Messages</div>
+      <div class="tablet-inner"><div id="mixedContainer"></div><button class="btn btn-blue" id="nextMixedBtn">Next</button></div>
+    </div>
+  </div>
+
+  <!-- ========== QUESTIONS ========== -->
+  <div id="tab-questions" class="tab-content">
+    <div class="tablet-frame">
+      <div class="tablet-header">❓ Questions</div>
+      <div class="tablet-inner"><div id="questionsContainer"></div><button class="btn btn-blue" id="nextQBtn">Next</button></div>
+    </div>
+  </div>
+
+  <!-- ========== MEMORY PRACTICE ========== -->
+  <div id="tab-memory" class="tab-content">
+    <div class="tablet-frame">
+      <div class="tablet-header">🧠 Memory Practice</div>
+      <div class="tablet-inner">
+        <div class="main-tabs" style="margin-bottom:10px;">
+          <button class="tab-btn memory-btn active" data-memory="mem-who">👤 Who</button>
+          <button class="tab-btn memory-btn" data-memory="mem-match">🧩 Match</button>
+          <button class="tab-btn memory-btn" data-memory="mem-missing">🔤 Missing</button>
+          <button class="tab-btn memory-btn" data-memory="mem-order">🔀 Order</button>
+          <button class="tab-btn memory-btn" data-memory="mem-reply">💬 Reply</button>
+        </div>
+        <div id="mem-who" class="game-section active"><div id="whoContainer"></div><button class="btn btn-blue" id="nextWhoBtn">Next</button></div>
+        <div id="mem-match" class="game-section hidden"><div id="matchHalvesContainer"></div><p id="matchHalvesFeedback" class="feedback"></p><button class="btn btn-blue" id="resetMatchHalvesBtn">Reset</button></div>
+        <div id="mem-missing" class="game-section hidden"><div id="missingContainer"></div><button class="btn btn-blue" id="nextMissingBtn">Next</button></div>
+        <div id="mem-order" class="game-section hidden">
+          <div class="ordered-list" id="orderedList"></div>
+          <div id="orderContainer"></div>
+          <p id="orderFeedback" class="feedback"></p>
+          <button class="btn btn-blue" id="resetOrderBtn">Reset</button>
+          <div class="collapsible-header" id="toggleCorrectOrder">🔍 Show Correct Order <span id="toggleOrderIcon">▶</span></div>
+          <div class="collapsible-body" id="correctOrderBody" style="max-height:150px;overflow-y:auto;"></div>
+        </div>
+        <div id="mem-reply" class="game-section hidden"><div id="replyContainer"></div><button class="btn btn-blue" id="nextReplyBtn">Next</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== TRANSLATE ========== -->
+  <div id="tab-translate" class="tab-content">
+    <div class="tablet-frame">
+      <div class="tablet-header">🌐 Translate</div>
+      <div class="tablet-inner"><div id="translateContainer"></div><button class="btn btn-blue" id="nextTransBtn">Next</button></div>
+    </div>
+  </div>
+
+  <!-- ========== ROLE PLAY ========== -->
+  <div id="tab-roleplay" class="tab-content">
+    <div class="tablet-frame">
+      <div class="tablet-header">🎭 Role Play</div>
+      <div class="tablet-inner">
+        <p style="text-align:center;color:#64748b;font-size:12px;">Choose your role:</p>
+        <div style="text-align:center;margin:6px 0;display:flex;gap:10px;justify-content:center;">
+          <button class="btn-outline active role-btn" data-role="chloe" style="display:flex;align-items:center;gap:4px;">
+            <img src="chloe-avatar.png" class="role-btn-avatar" onerror="this.style.display='none'"><span>Chloe</span>
+          </button>
+          <button class="btn-outline role-btn" data-role="anna" style="display:flex;align-items:center;gap:4px;">
+            <img src="anna-avatar.png" class="role-btn-avatar" onerror="this.style.display='none'"><span>Anna</span>
+          </button>
+        </div>
+        <div id="roleplayContainer"></div>
+        <button class="btn btn-green" id="startRoleBtn">Start Role Play</button>
+        <button class="btn btn-blue" id="nextRoleLineBtn" style="display:none;">I said my line! ▶️</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ========== TABS ==========
+  document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn[data-tab]').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+  });
+  document.querySelectorAll('.memory-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.memory-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('#tab-memory .game-section').forEach(g => g.classList.add('hidden'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.memory).classList.remove('hidden');
+    });
+  });
+  document.getElementById('toggleCorrectOrder').addEventListener('click', () => {
+    const body = document.getElementById('correctOrderBody');
+    const icon = document.getElementById('toggleOrderIcon');
+    body.classList.toggle('open');
+    icon.textContent = body.classList.contains('open') ? '▼' : '▶';
+  });
+
+  // ========== SOUNDS ==========
+  let actx;
+  function ctx() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); return actx; }
+  function okSound() {
+    const c = ctx(), o = c.createOscillator(), g = c.createGain();
+    o.connect(g); g.connect(c.destination); o.type = 'sine';
+    o.frequency.setValueAtTime(523, c.currentTime); o.frequency.setValueAtTime(659, c.currentTime+0.1); o.frequency.setValueAtTime(784, c.currentTime+0.2);
+    g.gain.setValueAtTime(0.4, c.currentTime); g.gain.exponentialRampToValueAtTime(0.01, c.currentTime+0.3);
+    o.start(c.currentTime); o.stop(c.currentTime+0.3);
+  }
+  function errSound() {
+    const c = ctx(), o = c.createOscillator(), g = c.createGain();
+    o.connect(g); g.connect(c.destination); o.type = 'square';
+    o.frequency.setValueAtTime(200, c.currentTime); o.frequency.setValueAtTime(180, c.currentTime+0.1);
+    g.gain.setValueAtTime(0.3, c.currentTime); g.gain.exponentialRampToValueAtTime(0.01, c.currentTime+0.2);
+    o.start(c.currentTime); o.stop(c.currentTime+0.2);
+  }
+  function dingSound() {
+    const c = ctx(), o = c.createOscillator(), g = c.createGain();
+    o.connect(g); g.connect(c.destination); o.type = 'sine';
+    o.frequency.setValueAtTime(800, c.currentTime); o.frequency.setValueAtTime(1200, c.currentTime+0.05);
+    g.gain.setValueAtTime(0.25, c.currentTime); g.gain.exponentialRampToValueAtTime(0.01, c.currentTime+0.15);
+    o.start(c.currentTime); o.stop(c.currentTime+0.15);
+  }
+
+  function speak(text, isAnna = true, callback = null) {
+    if ('speechSynthesis' in window) {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'en-US'; u.rate = 0.85; u.pitch = isAnna ? 1.15 : 1.0;
+      if (callback) { u.onend = callback; u.onerror = callback; }
+      speechSynthesis.speak(u);
+    }
+  }
+
+  function avatarHTML(from) {
+    const src = from === 'anna' ? 'anna-avatar.png' : 'chloe-avatar.png';
+    const initials = from === 'anna' ? 'A' : 'C';
+    return `<img src="${src}" class="msg-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+      <div class="msg-avatar-placeholder" style="display:none;">${initials}</div>`;
+  }
+
+  // ========== CHAT DATA ==========
+  const chatMessages = [
+    {from:'anna', text:'Hi Chloe! How are you? What are you doing right now?'},
+    {from:'chloe', text:'Hi Anna! I\'m fine! Right now I\'m sitting in my room and doing my homework. It\'s already 7 pm here. What about you?'},
+    {from:'anna', text:'I\'m writing a story for my blog. Rex is sleeping next to me. Everything is quiet here. Tell me about your life in London! Is it very different from my village?'},
+    {from:'chloe', text:'Oh yes, very different! London is huge! There are so many people everywhere. My school is huge too — it has 1,500 students. Can you imagine?'},
+    {from:'anna', text:'Wow! My school has only 20 children!'},
+    {from:'chloe', text:'Lucky! Your school sounds so friendly. But my school has great facilities — we have a big library, a computer lab, a swimming pool, and even a theatre! Here is a photo of my school:', img:'chloe-school.png'},
+    {from:'anna', text:'Wow, it looks amazing! We have a small library and a playground. That\'s all. But I\'m not homesick because my home is very close. What about you? Do you feel homesick sometimes?'},
+    {from:'chloe', text:'Not really. I was born here, so London is my home. But sometimes I miss my grandma. She lives in a small town.'},
+    {from:'anna', text:'What do you do every day?'},
+    {from:'chloe', text:'Every morning I take the bus to school. It takes about 30 minutes because of the heavy traffic. Then I have lessons until 3 pm. Look, this is the bus I take!', img:'chloe-transport.png'},
+    {from:'chloe', text:'After school, I often go to the park with my friends. There\'s a nice neighbourhood park near my house.'},
+    {from:'anna', text:'What are you doing this weekend? Any plans?'},
+    {from:'chloe', text:'Yes! I\'m visiting my grandma on Saturday. She lives outside the city. On Sunday, I\'m going to the cinema with my friends. We\'re watching a new film!'},
+    {from:'anna', text:'This weekend I\'m helping my dad on the farm. And on Sunday, I\'m going to the town with my parents.'},
+    {from:'chloe', text:'Do you like the town?'},
+    {from:'anna', text:'Not really. It\'s too crowded and noisy. Too much hustle and bustle for me! I prefer the peace and quiet of the countryside.'},
+    {from:'chloe', text:'I understand. But I love London! There\'s always something to do. The public transport is great — you can go anywhere by bus, metro, or train.'},
+    {from:'anna', text:'Don\'t you feel tired of the noise and pollution?'},
+    {from:'chloe', text:'Sometimes. That\'s why I like visiting my grandma. It\'s so peaceful there. But London is my home. Every city has good sides and bad sides.'},
+    {from:'anna', text:'You\'re right! Well, I have to go now. Time to feed the chickens!'},
+    {from:'chloe', text:'Haha! And I have to finish my homework. Talk to you soon! Bye!'},
+    {from:'anna', text:'Bye Chloe!'}
+  ];
+
+  // ========== CHAT ==========
+  let chatIndex=0, isChatPlaying=false;
+  function renderMessage(msg){
+    const div=document.createElement('div');
+    div.className='msg-row '+(msg.from==='chloe'?'right':'left');
+    div.innerHTML=`${avatarHTML(msg.from)}<div class="msg-bubble ${msg.from==='chloe'?'right':'left'}">${msg.text}${msg.img?`<br><img src="${msg.img}" onerror="this.style.display='none'">`:''}</div>`;
+    document.getElementById('chatMessages').appendChild(div);
+    document.getElementById('chatMessages').scrollTop=document.getElementById('chatMessages').scrollHeight;
+  }
+  function playChat(){
+    if(isChatPlaying) return;
+    isChatPlaying=true;
+    document.getElementById('startChatBtn').style.display='none';
+    document.getElementById('stopChatBtn').style.display='inline-block';
+    document.getElementById('chatMessages').innerHTML='';
+    chatIndex=0; showNextMessage();
+  }
+  function showNextMessage(){
+    if(!isChatPlaying||chatIndex>=chatMessages.length){
+      isChatPlaying=false;
+      document.getElementById('startChatBtn').style.display='inline-block';
+      document.getElementById('stopChatBtn').style.display='none';
+      return;
+    }
+    const msg=chatMessages[chatIndex]; renderMessage(msg); dingSound();
+    const u=new SpeechSynthesisUtterance(msg.text.replace(/<[^>]*>/g,''));
+    u.lang='en-US'; u.rate=0.85; u.pitch=msg.from==='anna'?1.15:1.0;
+    u.onend=()=>{chatIndex++; setTimeout(showNextMessage,500);};
+    u.onerror=()=>{chatIndex++; setTimeout(showNextMessage,500);};
+    speechSynthesis.speak(u);
+  }
+  function stopChat(){isChatPlaying=false; speechSynthesis.cancel(); document.getElementById('startChatBtn').style.display='inline-block'; document.getElementById('stopChatBtn').style.display='none';}
+  document.getElementById('startChatBtn').addEventListener('click',playChat);
+  document.getElementById('stopChatBtn').addEventListener('click',stopChat);
+
+  // ========== VOCAB ==========
+  const vocabPairs=[{word:'huge',def:'very big, enormous'},{word:'facilities',def:'rooms, equipment, or services in a building'},{word:'homesick',def:'feeling sad because you are away from home'},{word:'neighbourhood',def:'a district or area of a city where people live'},{word:'public transport',def:'buses, trains, metro that everyone can use'},{word:'heavy traffic',def:'a lot of cars moving slowly on the roads'},{word:'hustle and bustle',def:'busy, noisy activity in a city'},{word:'convenience',def:'something that makes life easier'}];
+  let vSel=null, vCount=0;
+  const vColors=['#2563eb','#8b5cf6','#ec4899','#f97316','#14b8a6','#eab308','#f43f5e','#06b6d4'];
+  function createVocab(){
+    const cont=document.getElementById('vocabMatchContainer'); cont.innerHTML=''; document.getElementById('vocabFeedback').textContent=''; vCount=0;
+    const row=document.createElement('div'); row.style.cssText='display:flex;gap:10px;justify-content:center;flex-wrap:wrap;';
+    const left=document.createElement('div'); left.className='match-column';
+    const right=document.createElement('div'); right.className='match-column';
+    [...vocabPairs].sort(()=>Math.random()-0.5).forEach(p=>{
+      const el=document.createElement('div'); el.className='match-item'; el.textContent=p.word; el.dataset.word=p.word;
+      el.addEventListener('click',function(){if(this.classList.contains('matched'))return; if(vSel)vSel.classList.remove('selected'); vSel=this; this.classList.add('selected');});
+      left.appendChild(el);
+    });
+    [...vocabPairs].sort(()=>Math.random()-0.5).forEach(p=>{
+      const el=document.createElement('div'); el.className='match-item'; el.textContent=p.def; el.dataset.word=p.word;
+      el.addEventListener('click',function(){if(!vSel||this.classList.contains('matched'))return; if(vSel.dataset.word===this.dataset.word){const ci=vocabPairs.findIndex(x=>x.word===vSel.dataset.word); const col=vColors[ci%vColors.length]; vSel.style.background=col; vSel.style.color='white'; vSel.classList.add('matched'); vSel.classList.remove('selected'); this.style.background=col; this.style.color='white'; this.classList.add('matched'); vCount++; okSound(); vSel=null; if(vCount===vocabPairs.length) document.getElementById('vocabFeedback').textContent='🎉 All matched!';}else{errSound(); vSel.classList.remove('selected'); vSel=null;}});
+      right.appendChild(el);
+    });
+    row.appendChild(left); row.appendChild(right); cont.appendChild(row);
+  }
+  document.getElementById('resetVocabBtn').addEventListener('click',createVocab);
+
+  // ========== TRUE/FALSE ==========
+  const tfData=[{text:'Chloe lives in London.',ans:true},{text:'Chloe\'s school has 200 students.',ans:false},{text:'Chloe takes the bus to school every day.',ans:true},{text:'Anna feels homesick in her village.',ans:false},{text:'Chloe is visiting her grandma this weekend.',ans:true},{text:'Anna loves the hustle and bustle of the town.',ans:false},{text:'London has good public transport.',ans:true},{text:'Chloe hates living in London.',ans:false}];
+  let tfI=0;
+  function showTF(){const c=document.getElementById('tfContainer'); c.innerHTML=''; if(tfI>=tfData.length){c.innerHTML='<p style="font-size:clamp(13px,2vw,16px);text-align:center;">🎉 All done!</p>'; return;} const s=tfData[tfI]; const p=document.createElement('p'); p.style.cssText='font-size:clamp(13px,2vw,16px);text-align:center;font-weight:bold;margin:8px 0;'; p.textContent=s.text; c.appendChild(p); const row=document.createElement('div'); row.style.cssText='display:flex;gap:8px;justify-content:center;'; const t=document.createElement('button'); t.className='btn btn-green'; t.textContent='✅ True'; const f=document.createElement('button'); f.className='btn btn-green'; f.textContent='❌ False'; t.addEventListener('click',()=>{const fb=document.createElement('p'); fb.className='feedback'; if(true===s.ans){fb.textContent='✅ Correct!'; fb.style.color='#16a34a'; okSound(); tfI++; setTimeout(showTF,800);}else{fb.textContent='❌ Try again!'; fb.style.color='#dc2626'; errSound();} c.appendChild(fb);}); f.addEventListener('click',()=>{const fb=document.createElement('p'); fb.className='feedback'; if(false===s.ans){fb.textContent='✅ Correct!'; fb.style.color='#16a34a'; okSound(); tfI++; setTimeout(showTF,800);}else{fb.textContent='❌ Try again!'; fb.style.color='#dc2626'; errSound();} c.appendChild(fb);}); row.appendChild(t); row.appendChild(f); c.appendChild(row);}
+  document.getElementById('nextTFBtn').addEventListener('click',()=>{tfI++; showTF();});
+
+  // ========== FILL GAPS ==========
+  const fillData=[{text:'Chloe lives in ___.',gap:'London',opts:['London','Paris','New York']},{text:'London is a ___ city.',gap:'huge',opts:['small','huge','quiet']},{text:'Chloe\'s school has great ___.',gap:'facilities',opts:['animals','facilities','fields']},{text:'Sometimes people feel ___ when they are far from home.',gap:'homesick',opts:['happy','homesick','excited']},{text:'Every morning Chloe takes the ___ to school.',gap:'bus',opts:['bus','train','bike']},{text:'There is a nice ___ park near Chloe\'s house.',gap:'neighbourhood',opts:['city','neighbourhood','mountain']},{text:'Anna prefers the ___ of the countryside.',gap:'peace and quiet',opts:['hustle and bustle','peace and quiet','heavy traffic']},{text:'London has great ___ — buses, metro, and trains.',gap:'public transport',opts:['public transport','facilities','schools']},{text:'Chloe is ___ her grandma on Saturday.',gap:'visiting',opts:['visiting','visits','visit']},{text:'Anna doesn\'t like the ___ of the town.',gap:'hustle and bustle',opts:['peace and quiet','hustle and bustle','fresh air']},{text:'There is a lot of ___ in London streets.',gap:'heavy traffic',opts:['heavy traffic','fresh air','fields']},{text:'Anna is not ___ because her home is close.',gap:'homesick',opts:['homesick','happy','tired']},{text:'Chloe was born in ___.',gap:'London',opts:['London','Paris','the village']},{text:'Every city has good sides and ___.',gap:'bad sides',opts:['good sides','bad sides','problems']}];
+  let fI=0, fShuff=[];
+  function showFill(){const c=document.getElementById('fillContainer'); if(fI===0) fShuff=[...fillData].sort(()=>Math.random()-0.5); if(fI>=fShuff.length){c.innerHTML='<p style="font-size:clamp(13px,2vw,16px);text-align:center;">🎉 All completed!</p>'; return;} c.innerHTML=''; const item=fShuff[fI]; const card=document.createElement('div'); card.className='choose-card'; const parts=item.text.split('___'); const bs=document.createElement('span'); bs.textContent=parts[0]; card.appendChild(bs); const sel=document.createElement('select'); sel.className='select-tense'; const ph=document.createElement('option'); ph.textContent='...'; ph.value=''; ph.disabled=true; ph.selected=true; sel.appendChild(ph); item.opts.forEach(o=>{const op=document.createElement('option'); op.value=o; op.textContent=o; sel.appendChild(op);}); sel.addEventListener('change',function(e){if(e.target.value===item.gap){e.target.style.background='#16a34a'; e.target.style.color='white'; e.target.disabled=true; okSound(); fI++; setTimeout(showFill,800);}else{e.target.style.background='#dc2626'; e.target.style.color='white'; errSound(); setTimeout(()=>{e.target.style.background='white'; e.target.style.color='#1e293b'; e.target.value='';},1000);}}); card.appendChild(sel); if(parts[1]){const as=document.createElement('span'); as.textContent=parts[1]; card.appendChild(as);} c.appendChild(card);}
+  document.getElementById('nextFillBtn').addEventListener('click',()=>{fI++; showFill();});
+
+  // ========== TENSE ==========
+  const tenseData=[{text:'Right now, Chloe ___ (do) her homework.',ans:'is doing',opts:['does','is doing','do']},{text:'Every morning Chloe ___ (take) the bus to school.',ans:'takes',opts:['takes','is taking','take']},{text:'This weekend, Chloe ___ (visit) her grandma.',ans:'is visiting',opts:['visits','is visiting','visit']},{text:'Anna ___ (not like) the hustle and bustle of the town.',ans:'doesn\'t like',opts:['doesn\'t like','isn\'t liking','don\'t like']},{text:'On Sunday, they ___ (watch) a new film at the cinema.',ans:'are watching',opts:['watch','are watching','watches']},{text:'Anna ___ (write) a story for her blog right now.',ans:'is writing',opts:['writes','is writing','write']},{text:'Chloe ___ (feel) homesick when she misses her grandma.',ans:'feels',opts:['feels','is feeling','feel']},{text:'Look! The bus ___ (come)!',ans:'is coming',opts:['comes','is coming','come']},{text:'___ Chloe ___ (live) in London?',ans:'Does ... live',opts:['Does ... live','Is ... living','Do ... live']},{text:'Anna and Chloe ___ (chat) at the moment.',ans:'are chatting',opts:['chat','are chatting','chats']},{text:'I ___ (go) to the cinema with friends on Sunday.',ans:'am going',opts:['go','am going','goes']},{text:'The girls ___ (talk) about their lives right now.',ans:'are talking',opts:['talk','are talking','talks']},{text:'___ Anna ___ (help) her dad on the farm this weekend?',ans:'Is ... helping',opts:['Is ... helping','Does ... help','Do ... help']},{text:'Chloe ___ (not visit) her grandma every day.',ans:'doesn\'t visit',opts:['doesn\'t visit','isn\'t visiting','don\'t visit']},{text:'Anna and Rex ___ (not play) in the fields right now.',ans:'are not playing',opts:['don\'t play','are not playing','doesn\'t play']},{text:'___ they ___ (go) to the town every weekend?',ans:'Do ... go',opts:['Do ... go','Are ... going','Does ... go']}];
+  let tI=0, tShuff=[];
+  function showTense(){const c=document.getElementById('tenseContainer'); if(tI===0) tShuff=[...tenseData].sort(()=>Math.random()-0.5); if(tI>=tShuff.length){c.innerHTML='<p style="font-size:clamp(13px,2vw,16px);text-align:center;">🎉 All done!</p>'; return;} c.innerHTML=''; const item=tShuff[tI]; const card=document.createElement('div'); card.className='choose-card'; card.innerHTML=item.text; const sel=document.createElement('select'); sel.className='select-tense'; const ph=document.createElement('option'); ph.textContent='...'; ph.value=''; ph.disabled=true; ph.selected=true; sel.appendChild(ph); item.opts.forEach(o=>{const op=document.createElement('option'); op.value=o; op.textContent=o; sel.appendChild(op);}); sel.addEventListener('change',function(e){if(e.target.value===item.ans){e.target.style.background='#16a34a'; e.target.style.color='white'; e.target.disabled=true; okSound(); tI++; setTimeout(showTense,800);}else{e.target.style.background='#dc2626'; e.target.style.color='white'; errSound(); setTimeout(()=>{e.target.style.background='white'; e.target.style.color='#1e293b'; e.target.value='';},1000);}}); card.appendChild(sel); c.appendChild(card);}
+  document.getElementById('nextTenseBtn').addEventListener('click',()=>{tI++; showTense();});
+
+  // ========== MIXED MESSAGES (13) ==========
+  const mixedData=[{words:['It','takes','30','minutes','because','of','the','heavy','traffic'],ans:'It takes 30 minutes because of the heavy traffic'},{words:['I\'m','writing','a','story','for','my','blog'],ans:'I\'m writing a story for my blog'},{words:['My','school','has','1,500','students'],ans:'My school has 1,500 students'},{words:['I\'m','visiting','my','grandma','on','Saturday'],ans:'I\'m visiting my grandma on Saturday'},{words:['I','prefer','the','peace','and','quiet','of','the','countryside'],ans:'I prefer the peace and quiet of the countryside'},{words:['There\'s','always','something','to','do','in','London'],ans:'There\'s always something to do in London'},{words:['Too','much','hustle','and','bustle','for','me'],ans:'Too much hustle and bustle for me'},{words:['Every','morning','I','take','the','bus','to','school'],ans:'Every morning I take the bus to school'},{words:['I','was','born','here','so','London','is','my','home'],ans:'I was born here so London is my home'},{words:['We','have','a','big','library','a','computer','lab','and','a','swimming','pool'],ans:'We have a big library a computer lab and a swimming pool'},{words:['She','lives','outside','the','city','in','a','small','town'],ans:'She lives outside the city in a small town'},{words:['The','public','transport','is','great','you','can','go','anywhere'],ans:'The public transport is great you can go anywhere'},{words:['Every','city','has','good','sides','and','bad','sides'],ans:'Every city has good sides and bad sides'}];
+  let mI=0, mRes=[];
+  function showMixed(){const c=document.getElementById('mixedContainer'); c.innerHTML=''; mRes=[]; const item=mixedData[mI%mixedData.length]; const wordRow=document.createElement('div'); wordRow.className='unscramble-row'; [...item.words].sort(()=>Math.random()-0.5).forEach(w=>{const wc=document.createElement('div'); wc.className='unscramble-word'; wc.textContent=w; wc.addEventListener('click',()=>{mRes.push(w); wc.remove(); const rr=document.getElementById('mixedResRow'); if(rr) rr.innerHTML=mRes.map(w=>`<span class="unscramble-word" style="background:#dbeafe;">${w}</span>`).join(' ');}); wordRow.appendChild(wc);}); c.appendChild(wordRow); const rr=document.createElement('div'); rr.className='result-row'; rr.id='mixedResRow'; c.appendChild(rr); const checkBtn=document.createElement('button'); checkBtn.className='btn btn-green'; checkBtn.textContent='✅ Check'; checkBtn.addEventListener('click',()=>{const fb=document.createElement('p'); fb.className='feedback'; const userAnswer=mRes.join(' ').replace(/\s+/g,' ').trim().toLowerCase(); const correctAnswer=item.ans.replace(/\s+/g,' ').trim().toLowerCase(); if(userAnswer===correctAnswer){fb.textContent='✅ Correct!'; fb.style.color='#16a34a'; okSound();}else{fb.textContent='❌ Try again! Correct: '+item.ans; fb.style.color='#dc2626'; errSound();} c.appendChild(fb);}); c.appendChild(checkBtn); mI++;}
+  document.getElementById('nextMixedBtn').addEventListener('click',showMixed);
+
+  // ========== QUESTIONS ==========
+  const qData=[{q:'Where does Chloe live?',a:['London','in London','she lives in London']},{q:'What is Chloe doing right now?',a:['doing homework','sitting in her room','doing her homework']},{q:'How many students does Chloe\'s school have?',a:['1500','1,500','1,500 students']},{q:'How does Chloe get to school?',a:['by bus','she takes the bus']},{q:'What facilities does Chloe\'s school have?',a:['library','computer lab','swimming pool','theatre']},{q:'Who is Chloe visiting this weekend?',a:['grandma','her grandma']},{q:'Why does Anna prefer the countryside?',a:['peace and quiet','it is quiet','she likes peace and quiet']},{q:'Does Chloe like London? Why?',a:['yes','yes she does','yes because there is always something to do']}];
+  let qI=0;
+  function showQ(){const c=document.getElementById('questionsContainer'); c.innerHTML=''; const item=qData[qI%qData.length]; const card=document.createElement('div'); card.className='choose-card'; card.innerHTML=`<p style="font-weight:bold;">${item.q}</p>`; const inp=document.createElement('input'); inp.className='transform-input'; inp.placeholder='Your answer...'; const btn=document.createElement('button'); btn.className='btn btn-blue'; btn.textContent='Check'; btn.addEventListener('click',()=>{const fb=document.createElement('p'); fb.className='feedback'; if(item.a.some(a=>inp.value.trim().toLowerCase()===a.toLowerCase())){fb.textContent='✅ Correct!'; fb.style.color='#16a34a'; okSound();}else{fb.textContent='❌ Possible: '+item.a[0]; fb.style.color='#dc2626'; errSound();} c.appendChild(fb);}); card.appendChild(inp); card.appendChild(btn); c.appendChild(card); qI++;}
+  document.getElementById('nextQBtn').addEventListener('click',showQ);
+
+  // ========== TRANSLATE (12) ==========
+  const transData=[{ru:'Хлоя живёт в Лондоне.',en:['Chloe lives in London.']},{ru:'Лондон — огромный город.',en:['London is a huge city.']},{ru:'В школе Хлои есть хорошие удобства.',en:['Chloe\'s school has great facilities.']},{ru:'Каждое утро Хлоя ездит на автобусе в школу.',en:['Every morning Chloe takes the bus to school.']},{ru:'В эти выходные она навещает свою бабушку.',en:['This weekend she is visiting her grandma.']},{ru:'Анна предпочитает тишину и покой деревни.',en:['Anna prefers the peace and quiet of the countryside.']},{ru:'В Лондоне отличный общественный транспорт.',en:['London has great public transport.']},{ru:'Иногда люди чувствуют тоску по дому.',en:['Sometimes people feel homesick.']},{ru:'Хлоя сейчас делает домашнюю работу.',en:['Chloe is doing her homework right now.']},{ru:'Анна не любит шум и суету города.',en:['Anna doesn\'t like the hustle and bustle of the town.']},{ru:'Рядом с домом Хлои есть хороший парк.',en:['There is a nice park near Chloe\'s house.']},{ru:'В Лондоне всегда есть чем заняться.',en:['There is always something to do in London.']}];
+  let trI=0, trShuff=[];
+  function showTrans(){const c=document.getElementById('translateContainer'); if(trI===0) trShuff=[...transData].sort(()=>Math.random()-0.5); if(trI>=trShuff.length){c.innerHTML='<p style="font-size:clamp(13px,2vw,16px);text-align:center;">🎉 All translated!</p>'; return;} c.innerHTML=''; const item=trShuff[trI]; const card=document.createElement('div'); card.className='translate-card'; card.style.background='#fff9c4'; card.innerHTML=`<p style="font-weight:bold;">${item.ru}</p>`; const inp=document.createElement('input'); inp.className='translate-input'; inp.placeholder='Translate...'; const btn=document.createElement('button'); btn.className='btn btn-blue'; btn.textContent='Check'; btn.addEventListener('click',()=>{const fb=document.createElement('p'); fb.className='feedback'; if(item.en.some(e=>inp.value.trim().toLowerCase()===e.toLowerCase())){fb.textContent='✅ Correct!'; fb.style.color='#16a34a'; okSound(); trI++; setTimeout(showTrans,1000);}else{fb.textContent='❌ Correct: '+item.en[0]; fb.style.color='#dc2626'; errSound();} c.appendChild(fb);}); card.appendChild(inp); card.appendChild(btn); c.appendChild(card);}
+  document.getElementById('nextTransBtn').addEventListener('click',()=>{trI++; showTrans();});
+
+  // ========== ROLE PLAY ==========
+  let role='chloe', rpIndex=0, rpStarted=false;
+  document.querySelectorAll('.role-btn').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); role=btn.dataset.role; rpIndex=0; rpStarted=false; document.getElementById('roleplayContainer').innerHTML=''; document.getElementById('startRoleBtn').style.display='inline-block'; document.getElementById('nextRoleLineBtn').style.display='none';});});
+  document.getElementById('startRoleBtn').addEventListener('click',()=>{rpStarted=true; rpIndex=0; document.getElementById('startRoleBtn').style.display='none'; document.getElementById('nextRoleLineBtn').style.display='inline-block'; showRoleLine();});
+  function showRoleLine(){const cont=document.getElementById('roleplayContainer'); if(rpIndex>=chatMessages.length){cont.innerHTML='<p style="font-size:clamp(13px,2vw,16px);text-align:center;">🎉 Dialogue complete!</p>'; document.getElementById('nextRoleLineBtn').style.display='none'; document.getElementById('startRoleBtn').style.display='inline-block'; return;} const msg=chatMessages[rpIndex]; const isMyLine=msg.from===role; cont.innerHTML=`<div class="msg-row ${msg.from==='chloe'?'right':'left'}" style="animation:none;">${avatarHTML(msg.from)}<div class="msg-bubble ${msg.from==='chloe'?'right':'left'}"><p style="margin:0;">${msg.text.replace(/<[^>]*>/g,'')}</p>${msg.img?`<img src="${msg.img}" style="max-width:100px;border-radius:6px;margin-top:3px;" onerror="this.style.display='none'">`:''}</div></div>${isMyLine?'<p style="text-align:center;color:#e67e22;font-weight:bold;font-size:14px;margin:6px 0;">🗣️ This is YOUR line! Say it aloud!</p>':''}`; if(!isMyLine){speak(msg.text.replace(/<[^>]*>/g,''),msg.from==='anna',()=>{rpIndex++; showRoleLine();});}}
+  document.getElementById('nextRoleLineBtn').addEventListener('click',()=>{if(!rpStarted)return; const msg=chatMessages[rpIndex]; if(msg.from===role){rpIndex++; showRoleLine();}});
+
+  // ========== MEMORY: WHO SAID IT? ==========
+  const whoData=[{text:'London is huge! My school has 1,500 students.',from:'chloe'},{text:'Time to feed the chickens!',from:'anna'},{text:'I prefer the peace and quiet of the countryside.',from:'anna'},{text:'The public transport is great — you can go anywhere.',from:'chloe'},{text:'I\'m writing a story for my blog.',from:'anna'},{text:'Every morning I take the bus to school.',from:'chloe'},{text:'Do you feel homesick sometimes?',from:'anna'},{text:'Every city has good sides and bad sides.',from:'chloe'}];
+  let whoI=0;
+  function showWho(){const c=document.getElementById('whoContainer'); c.innerHTML=''; if(whoI>=whoData.length){c.innerHTML='<p style="font-size:clamp(13px,2vw,16px);text-align:center;">🎉 All done!</p>'; return;} const item=whoData[whoI]; const p=document.createElement('p'); p.style.cssText='font-size:clamp(13px,2vw,16px);text-align:center;font-weight:bold;margin:8px 0;'; p.textContent=`"${item.text}"`; c.appendChild(p); const row=document.createElement('div'); row.className='who-card'; const annaDiv=document.createElement('div'); annaDiv.style.cssText='text-align:center;cursor:pointer;'; annaDiv.innerHTML=`${avatarHTML('anna')}<p style="font-size:11px;margin-top:3px;">Anna</p>`; annaDiv.addEventListener('click',()=>checkWho('anna',item,c)); const chloeDiv=document.createElement('div'); chloeDiv.style.cssText='text-align:center;cursor:pointer;'; chloeDiv.innerHTML=`${avatarHTML('chloe')}<p style="font-size:11px;margin-top:3px;">Chloe</p>`; chloeDiv.addEventListener('click',()=>checkWho('chloe',item,c)); row.appendChild(annaDiv); row.appendChild(chloeDiv); c.appendChild(row);}
+  function checkWho(choice,item,c){const fb=document.createElement('p'); fb.className='feedback'; if(choice===item.from){fb.textContent='✅ Correct!'; fb.style.color='#16a34a'; okSound(); whoI++; setTimeout(showWho,800);}else{fb.textContent='❌ Try again!'; fb.style.color='#dc2626'; errSound();} c.appendChild(fb);}
+  document.getElementById('nextWhoBtn').addEventListener('click',()=>{whoI++; showWho();});
+
+  // ========== MEMORY: MATCH HALVES ==========
+  const matchHalvesData=[{left:'Right now I\'m sitting in my room',right:'and doing my homework.'},{left:'London is huge!',right:'There are so many people everywhere.'},{left:'My school has great facilities',right:'— a library, a lab, a pool, and a theatre.'},{left:'Every morning I take the bus',right:'to school.'},{left:'I\'m visiting my grandma',right:'on Saturday.'},{left:'I prefer the peace and quiet',right:'of the countryside.'},{left:'The public transport is great',right:'— you can go anywhere.'},{left:'Every city has good sides',right:'and bad sides.'}];
+  let mhSel=null, mhCount=0;
+  const mhColors=['#2563eb','#8b5cf6','#ec4899','#f97316','#14b8a6','#eab308','#f43f5e','#06b6d4'];
+  function createMatchHalves(){const cont=document.getElementById('matchHalvesContainer'); cont.innerHTML=''; document.getElementById('matchHalvesFeedback').textContent=''; mhCount=0; const row=document.createElement('div'); row.style.cssText='display:flex;gap:12px;justify-content:center;flex-wrap:wrap;'; const left=document.createElement('div'); left.className='match-column'; const right=document.createElement('div'); right.className='match-column'; const lShuff=[...matchHalvesData].sort(()=>Math.random()-0.5); const rShuff=[...matchHalvesData].sort(()=>Math.random()-0.5); lShuff.forEach(h=>{const el=document.createElement('div'); el.className='match-item'; el.textContent=h.left; el.dataset.left=h.left; el.addEventListener('click',function(){if(this.classList.contains('matched'))return; if(mhSel)mhSel.classList.remove('selected'); mhSel=this; this.classList.add('selected');}); left.appendChild(el);}); rShuff.forEach(h=>{const el=document.createElement('div'); el.className='match-item'; el.textContent=h.right; el.dataset.left=h.left; el.addEventListener('click',function(){if(!mhSel||this.classList.contains('matched'))return; const orig=matchHalvesData.find(m=>m.left===mhSel.dataset.left); if(orig&&orig.right===this.textContent){const ci=matchHalvesData.findIndex(m=>m.left===orig.left); const col=mhColors[ci%mhColors.length]; mhSel.style.background=col; mhSel.style.color='white'; mhSel.classList.add('matched'); mhSel.classList.remove('selected'); this.style.background=col; this.style.color='white'; this.classList.add('matched'); mhCount++; okSound(); mhSel=null; if(mhCount===matchHalvesData.length) document.getElementById('matchHalvesFeedback').textContent='🎉 All matched!';}else{errSound(); mhSel.classList.remove('selected'); mhSel=null;}}); right.appendChild(el);}); row.appendChild(left); row.appendChild(right); cont.appendChild(row);}
+  document.getElementById('resetMatchHalvesBtn').addEventListener('click',createMatchHalves);
+
+  // ========== MEMORY: MISSING WORDS (ИСПРАВЛЕНО) ==========
+  const missingData=[
+    {text:'Right now I\'m ___ in my room and ___ my homework.',gaps:['sitting','doing'],opts1:['sitting','running','sleeping'],opts2:['doing','making','playing'],from:'chloe'},
+    {text:'I\'m ___ a story for my ___.',gaps:['writing','blog'],opts1:['reading','writing','watching'],opts2:['friend','blog','teacher'],from:'anna'},
+    {text:'London is ___! There are so many ___.',gaps:['huge','people'],opts1:['small','huge','quiet'],opts2:['animals','cars','people'],from:'chloe'},
+    {text:'My school has great ___ — a library, a computer ___, a swimming pool.',gaps:['facilities','lab'],opts1:['animals','facilities','fields'],opts2:['lab','shop','garden'],from:'chloe'},
+    {text:'Every morning I ___ the bus to ___.',gaps:['take','school'],opts1:['miss','take','drive'],opts2:['home','school','park'],from:'chloe'},
+    {text:'Too much hustle and ___ for me! I prefer the ___ and quiet.',gaps:['bustle','peace'],opts1:['noise','bustle','traffic'],opts2:['peace','city','village'],from:'anna'},
+    {text:'I\'m ___ my grandma on ___.',gaps:['visiting','Saturday'],opts1:['visiting','calling','leaving'],opts2:['Monday','Saturday','Sunday'],from:'chloe'},
+    {text:'Time to ___ the ___!',gaps:['feed','chickens'],opts1:['feed','milk','watch'],opts2:['cows','chickens','dogs'],from:'anna'}
+  ];
+  let missI=0, missShuff=[];
+  function showMissing(){
+    const c=document.getElementById('missingContainer');
+    if(missI===0) missShuff=[...missingData].sort(()=>Math.random()-0.5);
+    if(missI>=missShuff.length){c.innerHTML='<p style="font-size:clamp(13px,2vw,16px);text-align:center;">🎉 All done!</p>'; return;}
+    c.innerHTML=''; const item=missShuff[missI];
+    const card=document.createElement('div'); card.className='choose-card';
+    const parts=item.text.split('___');
+    
+    // Аватарка + первая часть
+    const avatarSpan=document.createElement('span'); avatarSpan.innerHTML=avatarHTML(item.from); card.appendChild(avatarSpan);
+    const span0=document.createElement('span'); span0.textContent=' '+parts[0]; card.appendChild(span0);
+    
+    // Первый select
+    const sel1=document.createElement('select'); sel1.className='select-gap';
+    const ph1=document.createElement('option'); ph1.textContent='...'; ph1.value=''; ph1.disabled=true; ph1.selected=true; sel1.appendChild(ph1);
+    item.opts1.forEach(o=>{const op=document.createElement('option'); op.value=o; op.textContent=o; sel1.appendChild(op);});
+    card.appendChild(sel1);
+    
+    // Вторая часть
+    const span1=document.createElement('span'); span1.textContent=parts[1]; card.appendChild(span1);
+    
+    // Второй select
+    const sel2=document.createElement('select'); sel2.className='select-gap';
+    const ph2=document.createElement('option'); ph2.textContent='...'; ph2.value=''; ph2.disabled=true; ph2.selected=true; sel2.appendChild(ph2);
+    item.opts2.forEach(o=>{const op=document.createElement('option'); op.value=o; op.textContent=o; sel2.appendChild(op);});
+    card.appendChild(sel2);
+    
+    // Оставшаяся часть
+    if(parts[2]){const span2=document.createElement('span'); span2.textContent=parts[2]; card.appendChild(span2);}
+    
+    // Кнопка
+    const btn=document.createElement('button'); btn.className='btn btn-blue'; btn.textContent='Check'; btn.style.marginLeft='8px';
+    btn.addEventListener('click',()=>{
+      const fb=document.createElement('p'); fb.className='feedback';
+      if(sel1.value===item.gaps[0]&&sel2.value===item.gaps[1]){
+        fb.textContent='✅ Correct!'; fb.style.color='#16a34a'; okSound(); missI++; setTimeout(showMissing,800);
+      }else{
+        fb.textContent='❌ Try again!'; fb.style.color='#dc2626'; errSound();
+      }
+      card.appendChild(fb);
+    });
+    card.appendChild(btn); c.appendChild(card);
+  }
+  document.getElementById('nextMissingBtn').addEventListener('click',()=>{missI++; showMissing();});
+
+  // ========== MEMORY: ORDER ==========
+  let userOrder=[];
+  function createOrder(){const cont=document.getElementById('orderContainer'), orderedList=document.getElementById('orderedList'); cont.innerHTML=''; orderedList.innerHTML=''; document.getElementById('orderFeedback').textContent=''; userOrder=[]; const pool=[...chatMessages].sort(()=>Math.random()-0.5); pool.forEach(msg=>{const div=document.createElement('div'); div.className=`order-bubble ${msg.from}`; div.innerHTML=`${avatarHTML(msg.from)}<span>${msg.text.replace(/<[^>]*>/g,'')}</span>`; div.style.display='flex'; div.style.alignItems='flex-end'; div.style.gap='5px'; div.dataset.index=chatMessages.indexOf(msg); div.addEventListener('click',()=>{if(div.classList.contains('placed'))return; userOrder.push(msg); div.classList.add('placed'); const placedDiv=document.createElement('div'); placedDiv.className=`order-bubble ${msg.from} placed-in-list`; placedDiv.innerHTML=`${avatarHTML(msg.from)}<span>${msg.text.replace(/<[^>]*>/g,'')}</span>`; placedDiv.style.display='flex'; placedDiv.style.alignItems='flex-end'; placedDiv.style.gap='5px'; placedDiv.addEventListener('click',()=>{const idx=userOrder.indexOf(msg); if(idx>-1){userOrder.splice(idx,1); placedDiv.remove(); div.classList.remove('placed');}}); orderedList.appendChild(placedDiv); orderedList.scrollTop=orderedList.scrollHeight; if(userOrder.length===chatMessages.length){const correct=userOrder.every((m,i)=>m===chatMessages[i]); const fb=document.getElementById('orderFeedback'); if(correct){fb.textContent='✅ Correct order!'; fb.style.color='#16a34a'; okSound();}else{fb.textContent='❌ Not correct.'; fb.style.color='#dc2626'; errSound();}}}); cont.appendChild(div);}); document.getElementById('correctOrderBody').innerHTML=chatMessages.map((m,i)=>`<div class="order-bubble ${m.from}" style="display:flex;align-items:flex-end;gap:5px;">${avatarHTML(m.from)}<span>${i+1}. ${m.text.replace(/<[^>]*>/g,'')}</span></div>`).join('');}
+  document.getElementById('resetOrderBtn').addEventListener('click',createOrder);
+
+  // ========== MEMORY: REPLY ==========
+  function showReply(){const cont=document.getElementById('replyContainer'); cont.innerHTML=''; const idx=Math.floor(Math.random()*(chatMessages.length-1)); const msg=chatMessages[idx], next=chatMessages[idx+1]; const card=document.createElement('div'); card.className='choose-card'; card.style.background='#f8fafc'; card.innerHTML=`<div style="display:flex;align-items:flex-end;gap:6px;width:100%;">${avatarHTML(msg.from)}<div style="background:${msg.from==='chloe'?'#dcf8c6':'white'};padding:7px 10px;border-radius:12px;max-width:80%;"><p style="font-weight:bold;margin:0;">"${msg.text.replace(/<[^>]*>/g,'')}"</p></div></div><div style="text-align:center;width:100%;margin-top:8px;"><button class="btn btn-blue" id="hearMsgBtn">🔊 Hear</button><p style="font-size:11px;color:#64748b;margin:5px 0;">Say the next line!</p><button class="btn btn-orange" id="saidBtn">✅ I said it!</button><button class="btn btn-green" id="hearReplyBtn" style="display:none;">🔊 Hear reply</button></div>`; cont.appendChild(card); speak(msg.text.replace(/<[^>]*>/g,''),msg.from==='anna'); document.getElementById('hearMsgBtn').addEventListener('click',()=>speak(msg.text.replace(/<[^>]*>/g,''),msg.from==='anna')); document.getElementById('saidBtn').addEventListener('click',()=>{document.getElementById('saidBtn').style.display='none'; document.getElementById('hearReplyBtn').style.display='inline-block';}); document.getElementById('hearReplyBtn').addEventListener('click',()=>speak(next.text.replace(/<[^>]*>/g,''),next.from==='anna'));}
+  document.getElementById('nextReplyBtn').addEventListener('click',showReply);
+
+  // ========== INIT ==========
+  createVocab(); showTF(); showFill(); showTense(); showMixed(); showQ(); showTrans();
+  createOrder(); showReply(); showWho(); createMatchHalves(); showMissing();
+</script>
+</body>
+</html>
