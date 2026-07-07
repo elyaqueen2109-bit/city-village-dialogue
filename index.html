@@ -402,22 +402,38 @@
     o.start(c.currentTime); o.stop(c.currentTime+0.15);
   }
 
-  // ========== ГОЛОСА (женский для телефона) ==========
+  // ========== ГОЛОСА (женский для телефона, улучшенная загрузка) ==========
   let femaleVoice = null;
-  if ('speechSynthesis' in window) {
-    speechSynthesis.onvoiceschanged = () => {
+
+  function loadVoices() {
+    return new Promise((resolve) => {
       const voices = speechSynthesis.getVoices();
-      femaleVoice = voices.find(v => 
-        v.lang.startsWith('en') && 
-        (v.name.includes('Female') || 
-         v.name.includes('Samantha') || 
-         v.name.includes('Karen') ||
-         v.name.includes('Susan') ||
-         v.name.includes('Google US English') ||
-         v.name.includes('Zira'))
-      );
-    };
+      if (voices.length > 0) {
+        resolve(voices);
+      } else {
+        speechSynthesis.onvoiceschanged = () => {
+          resolve(speechSynthesis.getVoices());
+        };
+      }
+    });
   }
+
+  // Загружаем голоса при старте
+  loadVoices().then(voices => {
+    femaleVoice = voices.find(v => 
+      v.lang.startsWith('en') && 
+      (v.name.includes('Female') || 
+       v.name.includes('Samantha') || 
+       v.name.includes('Karen') ||
+       v.name.includes('Susan') ||
+       v.name.includes('Google US English') ||
+       v.name.includes('Zira') ||
+       v.name.includes('English United States'))
+    );
+    if (!femaleVoice) {
+      femaleVoice = voices.find(v => v.lang.startsWith('en'));
+    }
+  });
 
   function speak(text, isAnna = true, callback = null) {
     if ('speechSynthesis' in window) {
